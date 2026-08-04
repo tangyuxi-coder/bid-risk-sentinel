@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>监控列表管理 · 投标风险哨兵</title>
+<style>
+  :root { --navy: #12263f; --amber: #b8860b; --bg: #f7f5f0; --line: #d8d3c8; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: #334155; margin: 0; padding: 32px 16px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Songti SC", "SimSun", serif; color: var(--navy); font-size: 24px; margin: 0 0 4px; }
+  .sub { color: #64748b; font-size: 13px; margin-bottom: 24px; line-height: 1.7; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-family: Georgia, "Songti SC", "SimSun", serif; color: var(--navy); font-size: 16px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  label { display: block; font-size: 13px; color: #475569; margin: 12px 0 4px; }
+  input, textarea { width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-family: inherit; background: #fff; }
+  input:focus, textarea:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(18,38,63,.12); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn { display: inline-block; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn-primary { background: var(--navy); color: #fff; width: 100%; padding: 12px; font-size: 15px; }
+  .btn-primary:hover { background: #1b3a5f; }
+  .btn-outline { background: #fff; color: var(--navy); border: 1px solid #94a3b8; }
+  .btn-outline:hover { background: var(--navy); color: #fff; }
+  .btn-danger { background: none; border: none; color: #b91c1c; font-size: 12px; cursor: pointer; padding: 2px 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: #64748b; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  td { padding: 8px; border-bottom: 1px solid #eee9df; vertical-align: top; }
+  .empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 14px 0; }
+  #msg { display: none; margin-top: 16px; padding: 12px 14px; border-radius: 6px; font-size: 13px; line-height: 1.7; }
+  .ok { background: #eef6ee; border: 1px solid #b7d9b7; color: #1d6b1d; }
+  .err { background: #fbeeee; border: 1px solid #e5b8b8; color: #a11; }
+  .busy { background: #fdf6e3; border: 1px solid #e8d9a8; color: #7a5b00; }
+  .hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  .meta { font-size: 12px; color: #64748b; margin-top: 8px; }
+  a { color: var(--navy); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>监控列表管理</h1>
+  <p class="sub">
+    此页面管理「每日一页纸推送」的数据源。项目与关键词保存在你的浏览器中，点击「发布到监控」后，
+    系统将整个列表一次性写入仓库 <code>data/watchlist.json</code>，次日北京时间 07:50 的微信推送即按新列表执行。
+    <a href="./">返回主站</a>
+  </p>
+
+  <!-- 项目列表 -->
+  <div class="card">
+    <h2>一、在手项目</h2>
+    <div id="projectList"></div>
+
+    <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);">
+      <label>项目名称 *</label>
+      <input type="text" id="pName" placeholder="例如：XX市智慧政务平台建设项目">
+      <div class="row">
+        <div>
+          <label>投标截止日 *</label>
+          <input type="date" id="pBid">
+        </div>
+        <div>
+          <label>保证金截止日（选填）</label>
+          <input type="date" id="pDeposit">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>质疑/异议期届满日（选填）</label>
+          <input type="date" id="pChallenge">
+        </div>
+        <div>
+          <label>备注（选填）</label>
+          <input type="text" id="pNote" placeholder="例如：预算500万">
+        </div>
+      </div>
+      <div style="margin-top:14px; text-align:right;">
+        <button class="btn btn-outline" id="addBtn" type="button">加入列表</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关键词 -->
+  <div class="card">
+    <h2>二、公告监控关键词</h2>
+    <label>关键词（用逗号分隔，每天按这些词检索政府采购网新增公告）</label>
+    <input type="text" id="kw" placeholder="例如：信息化, 软件开发, 运维服务">
+  </div>
+
+  <!-- 发布 -->
+  <div class="card">
+    <h2>三、发布到监控</h2>
+    <label>管理口令 *</label>
+    <input type="password" id="secret" placeholder="只有口令正确，服务器才会执行写入">
+    <p class="hint">口令由你自己设定，需与 Make.com 场景里配置的过滤口令一致。口令只保存在你自己的浏览器中。</p>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary" id="publishBtn" type="button">发布到监控</button>
+    </div>
+    <p class="meta" id="lastPublish"></p>
+    <div id="msg"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== 配置 =====
+  var WEBHOOK_URL = 'https://hook.eu1.make.com/8osu85280k7qguoghw86gd9bya17arst';
+  var LS_KEY = 'watchlist_mgr_v1';
+
+  // ===== 状态（存 localStorage，换设备需重新录入） =====
+  function loadState() {
+    try {
+      var s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+      return {
+        projects: Array.isArray(s.projects) ? s.projects : [],
+        keywords: Array.isArray(s.keywords) ? s.keywords : ['信息化', '软件开发', '运维服务'],
+        secret: typeof s.secret === 'string' ? s.secret : '',
+        lastPublish: typeof s.lastPublish === 'string' ? s.lastPublish : ''
+      };
+    } catch (e) {
+      return { projects: [], keywords: ['信息化', '软件开发', '运维服务'], secret: '', lastPublish: '' };
+    }
+  }
+  var state = loadState();
+
+  function saveState() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) { /* 忽略 */ }
+  }
+
+  // ===== 渲染 =====
+  var listEl = document.getElementById('projectList');
+  var kwEl = document.getElementById('kw');
+  var secretEl = document.getElementById('secret');
+  var lastEl = document.getElementById('lastPublish');
+
+  function render() {
+    if (!state.projects.length) {
+      listEl.innerHTML = '<div class="empty">列表为空。用下方表单加入第一个项目。</div>';
+    } else {
+      var html = '<table><thead><tr><th>项目</th><th>投标截止</th><th>保证金截止</th><th>异议期届满</th><th></th></tr></thead><tbody>';
+      state.projects.forEach(function (p, i) {
+        html += '<tr><td><strong>' + esc(p.name) + '</strong>' +
+          (p.note ? '<br><span class="hint">' + esc(p.note) + '</span>' : '') + '</td><td>' +
+          esc(p.bid_deadline) + '</td><td>' + (esc(p.deposit_deadline) || '—') + '</td><td>' +
+          (esc(p.challenge_deadline) || '—') + '</td><td><button class="btn-danger" data-i="' + i + '" type="button">删除</button></td></tr>';
+      });
+      listEl.innerHTML = html + '</tbody></table>';
+      Array.prototype.forEach.call(listEl.querySelectorAll('.btn-danger'), function (btn) {
+        btn.onclick = function () {
+          state.projects.splice(Number(btn.getAttribute('data-i')), 1);
+          saveState(); render();
+        };
+      });
+    }
+    kwEl.value = state.keywords.join(', ');
+    secretEl.value = state.secret;
+    lastEl.textContent = state.lastPublish ? '上次发布：' + state.lastPublish : '';
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function showMsg(cls, text) {
+    var m = document.getElementById('msg');
+    m.className = cls; m.style.display = 'block'; m.textContent = text;
+  }
+
+  // ===== 加入项目 =====
+  document.getElementById('addBtn').onclick = function () {
+    var name = document.getElementById('pName').value.trim();
+    var bid = document.getElementById('pBid').value;
+    if (!name) { showMsg('err', '请填写项目名称。'); return; }
+    if (!bid) { showMsg('err', '请选择投标截止日。'); return; }
+    state.projects.push({
+      name: name,
+      bid_deadline: bid,
+      deposit_deadline: document.getElementById('pDeposit').value || '',
+      challenge_deadline: document.getElementById('pChallenge').value || '',
+      note: document.getElementById('pNote').value.trim()
+    });
+    document.getElementById('pName').value = '';
+    document.getElementById('pBid').value = '';
+    document.getElementById('pDeposit').value = '';
+    document.getElementById('pChallenge').value = '';
+    document.getElementById('pNote').value = '';
+    saveState(); render();
+    showMsg('ok', '已加入列表。别忘了最后点「发布到监控」才会生效。');
+  };
+
+  // ===== 构建 watchlist 文件内容（与 daily_digest.py 的读取格式严格一致） =====
+  function buildWatchlist() {
+    var keywords = kwEl.value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    return {
+      projects: state.projects.map(function (p) {
+        return {
+          name: p.name,
+          bid_deadline: p.bid_deadline,
+          deposit_deadline: p.deposit_deadline || '',
+          challenge_deadline: p.challenge_deadline || '',
+          note: p.note || ''
+        };
+      }),
+      keywords: keywords,
+      alert_days: [7, 3, 1, 0]
+    };
+  }
+
+  // ===== 发布 =====
+  document.getElementById('publishBtn').onclick = function () {
+    var secret = secretEl.value.trim();
+    if (!secret) { showMsg('err', '请填写管理口令。'); return; }
+    state.secret = secret;
+    state.keywords = kwEl.value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    saveState();
+
+    var payload = {
+      secret: secret,
+      fileContent: JSON.stringify(buildWatchlist(), null, 2)
+    };
+
+    showMsg('busy', '正在发布，请稍候（通常 3-10 秒）……');
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      state.lastPublish = new Date().toLocaleString('zh-CN', { hour12: false });
+      saveState(); render();
+      showMsg('ok', '发布成功。监控列表已更新，明日 07:50 推送生效。可到仓库 data/watchlist.json 核对内容。');
+    }).catch(function (err) {
+      showMsg('err', '发布失败：' + err.message + '。请检查网络后重试；若多次失败，到 Make.com 查看场景运行记录。');
+    });
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
