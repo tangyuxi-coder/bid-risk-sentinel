@@ -1,13 +1,10 @@
-{
-  "projects": [
-    {
-      "name": "示例：XX市政务云采购项目（改完我就删掉这行）",
-      "bid_deadline": "2026-08-20",
-      "deposit_deadline": "2026-08-18",
-      "challenge_deadline": "",
-      "note": "预算500万"
-    }
-  ],
-  "keywords": ["信息化", "软件开发", "运维服务"],
-  "alert_days": [7, 3, 1, 0]
-}
+[
+  {
+    "name": "xx市政务云采购项目",
+    "buyer": "xx市政务服务中心",
+    "deadline": "2026-08-20",
+    "keywords": ["信息化", "软件开发", "运维服务"],
+    "note": "预算500万",
+    "timestamp": "2026-08-04T12:00:00.000Z"
+  }
+]
