@@ -1,8 +1,8 @@
-import { ShieldCheck, Calculator, CalendarClock, ArrowRight, AlertTriangle, ScanSearch, BookOpen, PackageCheck, GitCompareArrows } from 'lucide-react'
+import { ShieldCheck, Calculator, CalendarClock, ArrowRight, AlertTriangle, ScanSearch, BookOpen, PackageCheck, GitCompareArrows, Dna } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface Props {
-  onNavigate: (tab: 'criminal' | 'calc' | 'deadline' | 'riskscan' | 'lawsearch' | 'package' | 'contract') => void
+  onNavigate: (tab: 'criminal' | 'calc' | 'deadline' | 'riskscan' | 'lawsearch' | 'package' | 'contract' | 'collusion') => void
 }
 
 const SERIF = "Georgia,'Songti SC','SimSun',serif"
@@ -64,6 +64,18 @@ export default function Home({ onNavigate }: Props) {
           <CardContent className="text-sm text-slate-600 space-y-2">
             <p>中标后甲方合同草案 vs 招标文件实质性条款逐类比对，付款、质保、违约金变脸即标红，附《招标投标法》第四十六条依据。</p>
             <p className="flex items-center gap-1 text-[#12263f] font-medium">去比对 <ArrowRight className="w-4 h-4" /></p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-[#7b1fa2]" onClick={() => onNavigate('collusion')}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[#12263f]" style={{ fontFamily: SERIF }}>
+              <Dna className="w-5 h-5 text-[#7b1fa2]" /> 围标 DNA 检测
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-slate-600 space-y-2">
+            <p>批量上传多份投标文件：元数据取证（创建者/公司/创建时间）+ 文本指纹相似度 + 报价规律性分析，找出"同一双手"的痕迹。全程本地，文件不上传。</p>
+            <p className="flex items-center gap-1 text-[#12263f] font-medium">去检测 <ArrowRight className="w-4 h-4" /></p>
           </CardContent>
         </Card>
 
