@@ -6,9 +6,9 @@ import { ScanSearch, Sparkles, AlertTriangle, KeyRound } from 'lucide-react'
 
 const SERIF = "Georgia,'Songti SC','SimSun',serif"
 
-type Severity = 'red' | 'orange' | 'info'
+export type Severity = 'red' | 'orange' | 'info'
 
-interface PatternDef {
+export interface PatternDef {
   id: string
   name: string
   regex: RegExp
@@ -70,7 +70,7 @@ const PATTERNS: PatternDef[] = [
   },
 ]
 
-interface Finding {
+export interface Finding {
   pattern: PatternDef
   excerpt: string
   index: number
@@ -82,7 +82,7 @@ const SEV_STYLE: Record<Severity, { label: string; cls: string; bar: string }> =
   info: { label: '提示', cls: 'text-slate-600 bg-slate-50 border-slate-300', bar: 'bg-slate-400' },
 }
 
-function runRuleScan(text: string): Finding[] {
+export function runRuleScan(text: string): Finding[] {
   const findings: Finding[] = []
   for (const p of PATTERNS) {
     const re = new RegExp(p.regex.source, p.regex.flags)
@@ -136,9 +136,21 @@ ${text.slice(0, 15000)}`
   return JSON.parse(jsonMatch[0]) as AiResult
 }
 
+// 从哨兵助手接力过来的文件文本（一次性读取）
+function takeHandoff(): string {
+  try {
+    const t = localStorage.getItem('assistant_handoff')
+    if (t) localStorage.removeItem('assistant_handoff')
+    return t || ''
+  } catch {
+    return ''
+  }
+}
+
 export default function RiskScan() {
-  const [text, setText] = useState('')
-  const [scanned, setScanned] = useState(false)
+  const [handoff] = useState(takeHandoff)
+  const [text, setText] = useState(handoff)
+  const [scanned, setScanned] = useState(!!handoff)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('ds_api_key') || '')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<AiResult | null>(null)

@@ -16,6 +16,34 @@ interface CheckItem {
 // 封装要求关键词：从招标文件中定位相关句子
 const EXTRACT_RE = /[^。；\n]{0,60}(签字|签名|盖章|公章|骑缝章|密封|正本|副本|份数|壹份|两份|保证金|截止时间|递交|送达|电子投标文件|U盘|光盘|法定代表人|授权委托)[^。；\n]{0,60}[。；]?/g
 
+// 从招标文件文本中提取封装要求句子（供哨兵助手与本模块共用）
+export function extractPackingItems(text: string): string[] {
+  const found: string[] = []
+  const re = new RegExp(EXTRACT_RE.source, EXTRACT_RE.flags)
+  let m: RegExpExecArray | null
+  const seen = new Set<string>()
+  while ((m = re.exec(text)) !== null && found.length < 20) {
+    const s = m[0].trim()
+    const key = s.slice(0, 25)
+    if (!seen.has(key) && s.length > 8) {
+      seen.add(key)
+      found.push(s)
+    }
+  }
+  return found
+}
+
+// 从哨兵助手接力过来的文件文本（一次性读取）
+function takeHandoff(): string {
+  try {
+    const t = localStorage.getItem('assistant_handoff')
+    if (t) localStorage.removeItem('assistant_handoff')
+    return t || ''
+  } catch {
+    return ''
+  }
+}
+
 const DEFAULT_ITEMS = [
   '法定代表人或授权代表已在所有要求位置签字',
   '公章已加盖在所有要求位置（含骑缝章）',
@@ -26,26 +54,19 @@ const DEFAULT_ITEMS = [
 ]
 
 export default function PackageCheck() {
-  const [text, setText] = useState('')
-  const [items, setItems] = useState<CheckItem[]>([])
+  const [handoff] = useState(takeHandoff)
+  const [text, setText] = useState(handoff)
+  const buildItems = (source: string): CheckItem[] => [
+    ...extractPackingItems(source).map((s, i) => ({ id: `a${i}`, text: s, source: 'auto' as const, done: false })),
+    ...DEFAULT_ITEMS.map((t, i) => ({ id: `d${i}`, text: t, source: 'manual' as const, done: false })),
+  ]
+
+  const [items, setItems] = useState<CheckItem[]>(() => (handoff ? buildItems(handoff) : []))
   const [manual, setManual] = useState('')
-  const [generated, setGenerated] = useState(false)
+  const [generated, setGenerated] = useState(!!handoff)
 
   const generate = () => {
-    const found: CheckItem[] = []
-    const re = new RegExp(EXTRACT_RE.source, EXTRACT_RE.flags)
-    let m: RegExpExecArray | null
-    const seen = new Set<string>()
-    while ((m = re.exec(text)) !== null && found.length < 20) {
-      const s = m[0].trim()
-      const key = s.slice(0, 25)
-      if (!seen.has(key) && s.length > 8) {
-        seen.add(key)
-        found.push({ id: `a${found.length}`, text: s, source: 'auto', done: false })
-      }
-    }
-    const defaults: CheckItem[] = DEFAULT_ITEMS.map((t, i) => ({ id: `d${i}`, text: t, source: 'manual', done: false }))
-    setItems([...found, ...defaults])
+    setItems(buildItems(text))
     setGenerated(true)
   }
 

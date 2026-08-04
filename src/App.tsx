@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
-import { ShieldCheck, Calculator, CalendarClock, Home, Scale, ScanSearch, BookOpen, PackageCheck, GitCompareArrows, Dna, LayoutDashboard } from 'lucide-react'
+import { ShieldCheck, Calculator, CalendarClock, Home, Scale, ScanSearch, BookOpen, PackageCheck, GitCompareArrows, Dna, LayoutDashboard, MessageSquareText } from 'lucide-react'
+import Assistant from '@/sections/Assistant'
 import HomeSection from '@/sections/Home'
 import CriminalCheck from '@/sections/CriminalCheck'
 import Calculators from '@/sections/Calculators'
@@ -12,9 +13,10 @@ const CollusionCheck = lazy(() => import('@/sections/CollusionCheck'))
 import ProjectBoard from '@/sections/ProjectBoard'
 import { GLOBAL_DISCLAIMER } from '@/data/legal'
 
-type Tab = 'home' | 'criminal' | 'calc' | 'deadline' | 'riskscan' | 'lawsearch' | 'package' | 'contract' | 'collusion' | 'board'
+type Tab = 'assistant' | 'home' | 'criminal' | 'calc' | 'deadline' | 'riskscan' | 'lawsearch' | 'package' | 'contract' | 'collusion' | 'board'
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: 'assistant', label: '哨兵助手', icon: <MessageSquareText className="w-4 h-4" /> },
   { id: 'home', label: '首页', icon: <Home className="w-4 h-4" /> },
   { id: 'board', label: '项目看板', icon: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'riskscan', label: '标前排雷扫描', icon: <ScanSearch className="w-4 h-4" /> },
@@ -28,7 +30,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 ]
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('home')
+  const [tab, setTab] = useState<Tab>('assistant')
 
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-slate-800">
@@ -65,6 +67,7 @@ export default function App() {
 
       {/* 主体 */}
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {tab === 'assistant' && <Assistant onNavigate={(t) => setTab(t as Tab)} />}
         {tab === 'home' && <HomeSection onNavigate={(t) => setTab(t)} />}
         {tab === 'board' && <ProjectBoard />}
         {tab === 'criminal' && <CriminalCheck />}
