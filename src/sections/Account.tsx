@@ -7,6 +7,18 @@ import { auth, logout, loadUserData, saveUserData, sendEmailCode, loginWithEmail
 
 const SERIF = "Georgia,'Songti SC','SimSun',serif"
 
+// 把各种形态的错误对象转成可读文本（云开发SDK抛出的不是标准Error，直接String(e)会变成[object Object]）
+function errText(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object') {
+    const o = e as Record<string, unknown>
+    const parts = [o.code, o.message, o.msg].filter(v => v !== undefined && v !== null && v !== '').map(String)
+    if (parts.length) return parts.join('：')
+    try { return JSON.stringify(e) } catch { return String(e) }
+  }
+  return String(e)
+}
+
 export default function Account() {
   const [ready, setReady] = useState(false)
   const [email, setEmail] = useState<string | null>(null)
@@ -69,7 +81,7 @@ export default function Account() {
       setCodeSent(true)
       say('验证码已发送，请到邮箱查收（含垃圾邮件），验证码有时效，请尽快输入。', true)
     } catch (e) {
-      say('发送失败：' + (e instanceof Error ? e.message : String(e)))
+      say('发送失败：' + errText(e))
     } finally {
       setBusy(false)
     }
@@ -83,8 +95,8 @@ export default function Account() {
       await loginWithEmailCode(formEmail.trim(), verificationId, code.trim())
       await afterLogin(formEmail.trim())
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      if (/invalid_argument|verification code/i.test(msg)) say('验证码不正确或已过期，请重新获取后再试。')
+      const msg = errText(e)
+      if (/invalid_argument|verification|验证码/i.test(msg)) say('验证码不正确或已过期，请点「重新发送」获取新验证码后立即输入（如连续收到多封邮件，以最新一封为准）。')
       else say('登录失败：' + msg)
     } finally {
       setBusy(false)
@@ -114,7 +126,7 @@ export default function Account() {
       setDocId(id)
       setDataMsg('已保存。每日推送将按此配置执行。')
     } catch (e) {
-      setDataMsg('保存失败：' + (e instanceof Error ? e.message : String(e)))
+      setDataMsg('保存失败：' + errText(e))
     } finally {
       setSaving(false)
     }
