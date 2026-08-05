@@ -36,13 +36,28 @@ export async function sendEmailCode(email: string): Promise<string> {
   return (res as { verification_id: string }).verification_id
 }
 
-/** 用邮箱+验证码登录（新邮箱会自动创建账户） */
+/** 用邮箱+验证码登录（新邮箱会自动创建账户；已注册过的老邮箱自动换用已有账户登录） */
 export async function loginWithEmailCode(email: string, verificationId: string, code: string): Promise<void> {
-  await auth.signInWithEmail({
-    email,
-    verificationInfo: { verification_id: verificationId, is_user: false },
-    verificationCode: code,
-  })
+  try {
+    // 先按“新用户注册”登录
+    await auth.signInWithEmail({
+      email,
+      verificationInfo: { verification_id: verificationId, is_user: false },
+      verificationCode: code,
+    })
+  } catch (e) {
+    // 邮箱已注册过（ALREADY_EXISTS）→ 改用“已有用户”方式登录
+    const msg = e && typeof e === 'object' ? String((e as Record<string, unknown>).code ?? '') + String((e as Record<string, unknown>).message ?? '') : String(e)
+    if (/ALREADY_EXISTS/i.test(msg)) {
+      await auth.signInWithEmail({
+        email,
+        verificationInfo: { verification_id: verificationId, is_user: true },
+        verificationCode: code,
+      })
+      return
+    }
+    throw e
+  }
 }
 
 export async function logout(): Promise<void> {
