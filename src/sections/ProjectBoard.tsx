@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { auth, loadUserData, saveUserData } from '@/lib/cloudbase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,59 @@ export default function ProjectBoard() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
   }, [projects])
+
+  // ---------- 云端同步（登录后启用；未登录时纯本地，行为与原来一致） ----------
+  const docIdRef = useRef<string | null>(null)
+  const cloudExtraRef = useRef<{ keywords: string[]; pushplusToken: string }>({ keywords: [], pushplusToken: '' })
+  const [cloudOn, setCloudOn] = useState(false)
+  const [cloudNote, setCloudNote] = useState('')
+  const skipFirstSave = useRef(true)
+
+  // 挂载时：若已登录，拉取云端台账（云端非空则以云端为准；云端为空则把本地上传）
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const state = await auth.getLoginState()
+        if (!state || cancelled) return
+        const cloud = await loadUserData()
+        if (cancelled) return
+        cloudExtraRef.current = {
+          keywords: cloud?.data.keywords ?? [],
+          pushplusToken: cloud?.data.pushplusToken ?? '',
+        }
+        if (cloud && cloud.data.projects.length > 0) {
+          setProjects(cloud.data.projects as Project[])
+          docIdRef.current = cloud.id
+        } else {
+          const local: Project[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+          const id = await saveUserData(cloud?.id ?? null, {
+            projects: local,
+            keywords: cloudExtraRef.current.keywords,
+            pushplusToken: cloudExtraRef.current.pushplusToken,
+          })
+          docIdRef.current = id
+        }
+        if (!cancelled) setCloudOn(true)
+      } catch {
+        if (!cancelled) setCloudNote('云端同步暂不可用，数据仍保存在本机浏览器。')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // 台账变化时同步到云端（跳过初次加载触发的一次）
+  useEffect(() => {
+    if (!cloudOn) return
+    if (skipFirstSave.current) { skipFirstSave.current = false; return }
+    saveUserData(docIdRef.current, {
+      projects,
+      keywords: cloudExtraRef.current.keywords,
+      pushplusToken: cloudExtraRef.current.pushplusToken,
+    })
+      .then((id) => { docIdRef.current = id; setCloudNote('') })
+      .catch(() => setCloudNote('本次修改暂未同步到云端，下次成功时会自动覆盖。'))
+  }, [projects, cloudOn])
 
   const add = () => {
     if (!form.name.trim() || !form.bidDeadline) return
@@ -87,7 +141,9 @@ export default function ProjectBoard() {
         <div>
           <h2 className="text-2xl font-bold text-[#12263f]" style={{ fontFamily: SERIF }}>我的项目看板</h2>
           <p className="text-sm text-slate-500 mt-1">
-            登记在手项目的截止期，每天第一件事打开这里。数据只存在你自己的浏览器里，清浏览器数据会丢失。
+            登记在手项目的截止期，每天第一件事打开这里。
+            {cloudOn ? '已登录：数据自动同步云端，换设备不丢失。' : '未登录：数据只存在本机浏览器。登录「账户中心」可开启云端同步。'}
+            {cloudNote && <span className="text-orange-600 ml-1">{cloudNote}</span>}
           </p>
         </div>
         <div className="flex gap-2">
